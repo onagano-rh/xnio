@@ -193,17 +193,25 @@ public final class ByteBufferSlicePool implements Pool<ByteBuffer> {
 
         public void discard() {
             final ByteBuffer buffer = this.buffer.get();
-            if (buffer != null && this.buffer.compareAndSet(buffer, null)) {
-                // free when GC'd, no sooner
-                refSet.add(new Ref(buffer, region));
+            if (buffer != null) {
+                if (this.buffer.compareAndSet(buffer, null)) {
+                    // free when GC'd, no sooner
+                    refSet.add(new Ref(buffer, region));
+                } else {
+                    new Throwable("### " + buffer + " is discarded in other thread").printStackTrace();
+                }
             }
         }
 
         public void free() {
             final ByteBuffer buffer = this.buffer.get();
-            if (buffer != null && this.buffer.compareAndSet(buffer, null)) {
-                // trust the user, repool the buffer
-                doFree(region);
+            if (buffer != null) {
+                if (this.buffer.compareAndSet(buffer, null)) {
+                    // trust the user, repool the buffer
+                    doFree(region);
+                } else {
+                    new Throwable("### " + buffer + " is freed in other thread").printStackTrace();
+                }
             }
         }
 
